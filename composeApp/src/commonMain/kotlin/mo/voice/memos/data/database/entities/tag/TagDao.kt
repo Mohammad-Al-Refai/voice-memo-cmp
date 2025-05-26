@@ -9,10 +9,10 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface TagDao {
     @Upsert
-    fun upsert(tag: Tag)
+    suspend fun upsert(tag: Tag)
 
     @Delete
-    fun delete(tag: Tag)
+    suspend fun delete(tag: Tag)
 
     @Query("SELECT * FROM Tag")
     fun getAll(): Flow<List<Tag>>

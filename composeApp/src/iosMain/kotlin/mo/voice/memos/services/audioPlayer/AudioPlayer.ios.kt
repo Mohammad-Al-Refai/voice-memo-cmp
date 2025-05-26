@@ -22,7 +22,7 @@ actual class AudioPlayer actual constructor(
     }
 
     actual fun playerState(): PlayerState {
-        TODO("Not yet implemented")
+       return PlayerState()
     }
 
 }
