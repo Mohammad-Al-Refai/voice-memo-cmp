@@ -9,7 +9,6 @@ import org.koin.dsl.module
 
 expect val platformModules: Module
 val commonModules = module {
-
     viewModelOf(::LandingViewModel)
 }
 

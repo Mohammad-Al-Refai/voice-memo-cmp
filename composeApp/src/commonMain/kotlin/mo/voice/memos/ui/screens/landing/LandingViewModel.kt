@@ -1,15 +1,20 @@
 package mo.voice.memos.ui.screens.landing
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.io.files.Path
-import kotlinx.io.files.SystemFileSystem
 import mo.voice.memos.data.RecordFile
+import mo.voice.memos.data.database.VoiceNoteDatabase
+import mo.voice.memos.data.database.entities.voiceNote.VoiceNote
 import mo.voice.memos.services.audioRecorderService.AudioRecorderService
 import mo.voice.memos.services.permissionsManager.PermissionStatus
 import mo.voice.memos.services.permissionsManager.PermissionType
 import mo.voice.memos.services.permissionsManager.PermissionsManager
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
+import kotlin.random.Random
 
 data class LandingScreenState(
     val isRecordDialogOpen: Boolean,
@@ -27,7 +32,8 @@ sealed class LandingVMSideEffect {
 
 class LandingViewModel(
     val permissionsManager: PermissionsManager,
-    private val audioRecorderService: AudioRecorderService
+    private val audioRecorderService: AudioRecorderService,
+    private val voiceNoteDatabase: VoiceNoteDatabase
 ) : ViewModel(),
     ContainerHost<LandingScreenState, LandingVMSideEffect> {
     override val container =
@@ -43,7 +49,9 @@ class LandingViewModel(
         )
 
     init {
-        prepareAllRecords()
+        viewModelScope.launch {
+            prepareAllRecords()
+        }
     }
 
     fun onRecordPermissionResult(status: PermissionStatus) {
@@ -120,45 +128,45 @@ class LandingViewModel(
                 }
             },
             onFileReady = {
+                voiceNoteDatabase.voiceNoteDao().upsert(
+                    VoiceNote(
+                        title = "Untitled#${Random.nextInt(from = 0, until = 1000)}",
+                        audioFilePath = it
+                    )
+                )
                 intent {
                     reduce {
                         state.copy(isRecordDialogOpen = false)
                     }
                 }
-                prepareAllRecords()
+                viewModelScope.launch {
+                    prepareAllRecords()
+                }
             }
         )
     }
 
-    private fun prepareAllRecords() {
+    private suspend fun prepareAllRecords() {
         intent {
             reduce {
                 state.copy(isLoading = true)
             }
         }
         val records = mutableListOf<RecordFile>()
-        val dir = audioRecorderService.getPlatformRecordsDirPath() ?: return
-        try {
-            SystemFileSystem.list(dir).forEach {
-                records.add(
-                    RecordFile(
-                        path = Path(dir, it.name),
-                        name = it.name,
-                    )
+        val all = voiceNoteDatabase.voiceNoteDao().getAll().first()
+        println(all)
+        all.forEach { voiceNote ->
+            records.add(
+                RecordFile(
+                    path = Path(voiceNote.audioFilePath),
+                    name = voiceNote.title
                 )
-            }
-            intent {
-                reduce {
-                    state.copy(records = records, isLoading = false)
-                }
-            }
-        } catch (e: Exception) {
-            intent {
-                reduce {
-                    state.copy(isError = true, isLoading = false)
-                }
+            )
+        }
+        intent {
+            reduce {
+                state.copy(isLoading = false, records = records)
             }
         }
-
     }
 }
