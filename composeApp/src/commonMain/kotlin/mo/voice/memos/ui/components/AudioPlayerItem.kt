@@ -104,10 +104,6 @@ private fun AudioControl(state: PlayerState?, audioPlayer: AudioPlayer, recordFi
         val url = recordFile.path.parent.let {
             it.toString() + "/" + recordFile.path.name
         }
-        println("url: $url")
-        println("recordFile.path.name: ${recordFile.path.name}")
-        println("recordFile.path.parent.name: ${recordFile.path.parent?.name}")
-
         audioPlayer.prepare(url = url)
     }
     if (state == null) return
