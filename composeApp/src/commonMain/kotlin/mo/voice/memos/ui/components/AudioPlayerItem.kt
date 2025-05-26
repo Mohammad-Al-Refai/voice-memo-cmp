@@ -101,9 +101,7 @@ fun AudioPlayerItem(recordFile: RecordFile) {
 @Composable
 private fun AudioControl(state: PlayerState?, audioPlayer: AudioPlayer, recordFile: RecordFile) {
     LaunchedEffect(Unit) {
-        val url = recordFile.path.parent.let {
-            it.toString() + "/" + recordFile.path.name
-        }
+        val url = recordFile.getFilePath() ?: return@LaunchedEffect
         audioPlayer.prepare(url = url)
     }
     if (state == null) return
