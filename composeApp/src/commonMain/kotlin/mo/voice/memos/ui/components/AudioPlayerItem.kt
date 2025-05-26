@@ -102,7 +102,7 @@ fun AudioPlayerItem(recordFile: RecordFile) {
 private fun AudioControl(state: PlayerState?, audioPlayer: AudioPlayer, recordFile: RecordFile) {
     LaunchedEffect(Unit) {
         val url = recordFile.path.parent.let {
-            it.toString() + "/" + recordFile.name
+            it.toString() + "/" + recordFile.path.name
         }
         audioPlayer.prepare(url = url)
     }
