@@ -10,23 +10,23 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface VoiceNoteDao {
     @Upsert
-    fun upsert(voiceNote: VoiceNote)
+    suspend fun upsert(voiceNote: VoiceNote)
 
     @Delete
-    fun delete(voiceNote: VoiceNote)
+    suspend fun delete(voiceNote: VoiceNote)
 
     @Query("SELECT * FROM VoiceNote")
-    fun getAll(): Flow<List<VoiceNote>>
+     fun getAll(): Flow<List<VoiceNote>>
 
     @Query("SELECT * FROM VoiceNote WHERE id = :id")
-    fun getById(id: Int): Flow<VoiceNote?>
+     fun getById(id: Int): Flow<VoiceNote?>
 
     @Query("SELECT * FROM VoiceNote WHERE title = :title")
-    fun getByTitle(title: String): Flow<VoiceNote?>
+     fun getByTitle(title: String): Flow<VoiceNote?>
 
     @Query("SELECT * FROM VoiceNote WHERE tagId = :tagId")
-    fun getAllByTagId(tagId: Int): Flow<List<VoiceNote>>
+     fun getAllByTagId(tagId: Int): Flow<List<VoiceNote>>
 
     @Query("SELECT * FROM VoiceNote WHERE title LIKE :title")
-    fun getByTitleLike(title: String): Flow<List<VoiceNote>>
+     fun getByTitleLike(title: String): Flow<List<VoiceNote>>
 }

@@ -1,172 +1,125 @@
 package mo.voice.memos.ui.screens.landing
 
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.IO
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.io.files.Path
-import mo.voice.memos.data.RecordFile
+import kotlinx.coroutines.withContext
 import mo.voice.memos.data.database.VoiceNoteDatabase
-import mo.voice.memos.data.database.entities.voiceNote.VoiceNote
-import mo.voice.memos.services.audioRecorderService.AudioRecorderService
-import mo.voice.memos.services.permissionsManager.PermissionStatus
-import mo.voice.memos.services.permissionsManager.PermissionType
-import mo.voice.memos.services.permissionsManager.PermissionsManager
+import mo.voice.memos.data.database.entities.tag.Tag
 import org.orbitmvi.orbit.ContainerHost
 import org.orbitmvi.orbit.viewmodel.container
-import kotlin.random.Random
 
-data class LandingScreenState(
-    val isRecordDialogOpen: Boolean,
-    val isRecordPermissionGranted: Boolean,
-    val shouldRequestRecordPermission: Boolean,
-    val audioAmplitude: Int,
-    val records: List<RecordFile> = emptyList(),
-    val isLoading: Boolean = false,
-    val isError: Boolean
+data class TagItem(
+    val name: String,
+    val voiceNotesCount: Int,
+    val id: Int,
+    val color: Color
 )
 
-sealed class LandingVMSideEffect {
+data class LandingScreenState(
+    val isLoading: Boolean = false,
+    val isError: Boolean = false,
+    val isAddTagDialogVisible: Boolean = false,
+    val tags: List<TagItem> = emptyList()
+)
+
+sealed class LandingScreenSideEffect {
 
 }
 
-class LandingViewModel(
-    val permissionsManager: PermissionsManager,
-    private val audioRecorderService: AudioRecorderService,
-    private val voiceNoteDatabase: VoiceNoteDatabase
-) : ViewModel(),
-    ContainerHost<LandingScreenState, LandingVMSideEffect> {
+class LandingViewModel(private val voiceNoteDatabase: VoiceNoteDatabase) : ViewModel(),
+    ContainerHost<LandingScreenState, LandingScreenSideEffect> {
     override val container =
-        container<LandingScreenState, LandingVMSideEffect>(
-            LandingScreenState(
-                isRecordDialogOpen = false,
-                shouldRequestRecordPermission = false,
-                isRecordPermissionGranted = false,
-                audioAmplitude = 0,
-                isError = false,
-                isLoading = false
-            )
-        )
+        container<LandingScreenState, LandingScreenSideEffect>(LandingScreenState())
 
     init {
         viewModelScope.launch {
-            prepareAllRecords()
+            getAllTags()
         }
     }
 
-    fun onRecordPermissionResult(status: PermissionStatus) {
+    fun onAddTagClick() {
         intent {
-            when (status) {
-                PermissionStatus.GRANTED -> {
-                    intent {
-                        reduce {
-                            state.copy(isRecordDialogOpen = true)
-                        }
-                    }
-                    startRecording()
-                }
-
-                PermissionStatus.DENIED -> {
-
-                }
-
-                PermissionStatus.NOT_DETERMINED -> {}
-            }
+            reduce { state.copy(isAddTagDialogVisible = true) }
         }
     }
 
-
-    fun onDismissRecordDialog() {
+    fun onSaveTag(tag: Tag) {
         intent {
-            reduce {
-                state.copy(isRecordDialogOpen = false)
-            }
+            reduce { state.copy(isAddTagDialogVisible = false) }
+        }
+
+        viewModelScope.launch {
+            voiceNoteDatabase.tagDao().upsert(tag)
+            getAllTags()
         }
     }
 
-    fun onRecordButtonClick() {
-        permissionsManager.getPermissionStatus(PermissionType.AUDIO_RECORD) {
-            when (it) {
-                PermissionStatus.GRANTED -> {
-                    intent {
-                        reduce {
-                            state.copy(isRecordDialogOpen = true)
-                        }
-                    }
-                    startRecording()
-                }
-
-                PermissionStatus.DENIED -> intent {
-                    reduce {
-                        state.copy(shouldRequestRecordPermission = true)
-                    }
-                }
-
-                PermissionStatus.NOT_DETERMINED -> {
-
-                }
-            }
-        }
-    }
-
-    fun onStopRecording() {
+    fun onDismissAddTagDialog() {
         intent {
-            reduce {
-                state.copy(isRecordDialogOpen = false)
-            }
+            reduce { state.copy(isAddTagDialogVisible = false) }
         }
-        audioRecorderService.stopRecording()
     }
 
-    private fun startRecording() {
-        audioRecorderService.startRecording(
-            onAmplitude = {
-                intent {
-                    reduce {
-                        state.copy(audioAmplitude = it)
-                    }
-                }
-            },
-            onFileReady = {
-                voiceNoteDatabase.voiceNoteDao().upsert(
-                    VoiceNote(
-                        title = "Untitled#${Random.nextInt(from = 0, until = 1000)}",
-                        audioFilePath = it
-                    )
+    private suspend fun getAllTags() {
+        intent {
+            reduce { state.copy(isLoading = true) }
+        }
+        val allTags = withContext(Dispatchers.IO) {
+            val tagDao = voiceNoteDatabase.tagDao()
+            val noteDao = voiceNoteDatabase.voiceNoteDao()
+
+            tagDao.getAll().first().map { tag ->
+                val voiceNotesCount = noteDao.getAllByTagId(tag.id).first().size
+                TagItem(
+                    name = tag.name,
+                    voiceNotesCount = voiceNotesCount,
+                    id = tag.id,
+                    color = tag.color.toColor()
                 )
-                intent {
-                    reduce {
-                        state.copy(isRecordDialogOpen = false)
-                    }
-                }
-                viewModelScope.launch {
-                    prepareAllRecords()
-                }
             }
-        )
+        }
+
+        intent {
+            reduce { state.copy(tags = allTags, isLoading = false) }
+        }
     }
 
-    private suspend fun prepareAllRecords() {
-        intent {
-            reduce {
-                state.copy(isLoading = true)
-            }
+}
+
+fun String.toColor(): Color {
+    val hex = this.removePrefix("#")
+    val r: Int
+    val g: Int
+    val b: Int
+    val a: Int
+
+    when (hex.length) {
+        6 -> { // RRGGBB
+            a = 255
+            r = hex.substring(0, 2).toInt(16)
+            g = hex.substring(2, 4).toInt(16)
+            b = hex.substring(4, 6).toInt(16)
         }
-        val records = mutableListOf<RecordFile>()
-        val all = voiceNoteDatabase.voiceNoteDao().getAll().first()
-        println(all)
-        all.forEach { voiceNote ->
-            records.add(
-                RecordFile(
-                    path = Path(voiceNote.audioFilePath),
-                    name = voiceNote.title
-                )
-            )
+
+        8 -> { // AARRGGBB
+            a = hex.substring(0, 2).toInt(16)
+            r = hex.substring(2, 4).toInt(16)
+            g = hex.substring(4, 6).toInt(16)
+            b = hex.substring(6, 8).toInt(16)
         }
-        intent {
-            reduce {
-                state.copy(isLoading = false, records = records)
-            }
-        }
+
+        else -> throw IllegalArgumentException("Invalid color format: $this")
     }
+
+    return Color(
+        red = r / 255f,
+        green = g / 255f,
+        blue = b / 255f,
+        alpha = a / 255f
+    )
 }

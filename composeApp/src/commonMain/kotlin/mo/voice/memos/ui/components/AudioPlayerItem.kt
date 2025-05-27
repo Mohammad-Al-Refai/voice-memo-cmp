@@ -23,8 +23,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import compose.icons.FontAwesomeIcons
 import compose.icons.fontawesomeicons.Regular
@@ -123,15 +121,7 @@ private fun AudioControl(state: PlayerState?, audioPlayer: AudioPlayer, recordFi
                 modifier = Modifier
                     .weight(1f)
                     .height(4.dp)
-                    .padding(horizontal = 4.dp),
-                drawStopIndicator = {
-                    drawLine(
-                        Color.Green,
-                        start = Offset(0f, 0f),
-                        end = Offset(10f, 0f),
-                        strokeWidth = 4f
-                    )
-                }
+                    .padding(horizontal = 4.dp)
             )
             val totalSeconds = state.currentTime.toInt()
             val minutes = totalSeconds / 60

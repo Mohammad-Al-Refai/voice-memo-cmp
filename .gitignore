@@ -1,7 +1,10 @@
 *.iml
+.fleet
 .kotlin
 .gradle
 **/build/
+/composeApp/release/
+/iosApp/Pods/
 xcuserdata
 !src/**/build/
 local.properties
@@ -10,9 +13,12 @@ local.properties
 captures
 .externalNativeBuild
 .cxx
+
+# Xcode
 *.xcodeproj/*
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
 !*.xcodeproj/project.xcworkspace/
 !*.xcworkspace/contents.xcworkspacedata
 **/xcshareddata/WorkspaceSettings.xcsettings
+iosApp/iosApp.xcworkspace/contents.xcworkspacedata
