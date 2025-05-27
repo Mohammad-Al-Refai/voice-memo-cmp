@@ -38,7 +38,7 @@ import org.koin.core.parameter.parametersOf
 @Composable
 fun TagManagerScreen(
     tagId: Int,
-    vm: TagManagerViewModel = koinViewModel(parameters = { parametersOf(tagId) })
+    vm: TagManagerViewModel = koinViewModel<TagManagerViewModel>(parameters = { parametersOf(tagId) })
 ) {
     val state by vm.container.stateFlow.collectAsStateWithLifecycle()
     Scaffold(
