@@ -106,8 +106,10 @@ class TagManagerViewModel(
                     }
                 }
 
-                PermissionStatus.NOT_DETERMINED -> {
-
+                PermissionStatus.NOT_DETERMINED -> intent {
+                    reduce {
+                        state.copy(shouldRequestRecordPermission = true)
+                    }
                 }
             }
         }

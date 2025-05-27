@@ -1,6 +1,7 @@
 package mo.voice.memos.services.audioPlayer
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 
@@ -23,6 +24,11 @@ actual fun AudioProvider(
             },
             context = context
         )
+    }
+    DisposableEffect(Unit) {
+        onDispose {
+            audioPlayer.cleanUp()
+        }
     }
     composable(audioPlayer)
 }
